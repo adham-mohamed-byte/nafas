@@ -1,226 +1,156 @@
 
 # -*- coding: utf-8 -*-
 import streamlit as st
-import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
-import io, hashlib, math, random, textwrap
+from PIL import Image, ImageDraw
+import io, random, math, hashlib
 
-st.set_page_config(page_title="Lung Insight (Demo)",
-                   page_icon="🫁",
-                   layout="wide",
-                   initial_sidebar_state="expanded")
+st.set_page_config(page_title="LungSight Pro (Demo)", page_icon="🫁", layout="wide")
 
-# ---- Custom purple theme ----
-PRIMARY = "#6C2BD9"  # violet-700
-BG = "#0B021B"       # near-black purple
-CARD = "#140B2B"
+PRIMARY = "#6C2BD9"  # violet
+BG = "#0B021B"
 TEXT = "#F5F3FF"
 
 st.markdown(f"""
-    <style>
-    .stApp {{
-        background: radial-gradient(60% 80% at 20% 10%, #1E0B45 0%, #0B021B 60%);
-        color: {TEXT};
-    }}
-    .stButton>button {{
-        background: {PRIMARY} !important;
-        color: white !important;
-        border-radius: 16px;
-        padding: 0.6rem 1rem;
-        border: 1px solid rgba(255,255,255,0.08);
-        box-shadow: 0 6px 20px rgba(108,43,217,0.25);
-    }}
-    .css-1y4p8pa, .css-10trblm, .stMarkdown, .stText, .stSubheader, h1,h2,h3,h4,h5,h6, p, span {{
-        color: {TEXT} !important;
-    }}
-    .block-container {{
-        padding-top: 1rem;
-        padding-bottom: 2rem;
-    }}
-    .glass {{
-        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
-        border: 1px solid rgba(255,255,255,0.06);
-        border-radius: 18px;
-        padding: 1rem 1.2rem;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-    }}
-    .metric-card {{
-        background: linear-gradient(180deg, rgba(108,43,217,0.10), rgba(108,43,217,0.03));
-        border: 1px solid rgba(108,43,217,0.15);
-        border-radius: 18px;
-        padding: 1rem 1.2rem;
-    }}
-    .small {{
-        opacity: 0.85;
-        font-size: 0.9rem;
-    }}
-    .disclaimer {{
-        background: rgba(255,255,255,0.06);
-        border-left: 4px solid {PRIMARY};
-        padding: .75rem 1rem;
-        border-radius: 12px;
-        margin-top: .5rem;
-        font-size: 0.92rem;
-    }}
-    </style>
+<style>
+.stApp {{ background: radial-gradient(60% 80% at 20% 10%, #1E0B45 0%, #0B021B 60%); color: {TEXT}; }}
+.block-container {{ padding-top:1rem; padding-bottom:2rem; }}
+.stButton>button {{ background: {PRIMARY} !important; color: white !important; border-radius: 12px; padding: .6rem 1rem; }}
+.card {{ background: linear-gradient(180deg, rgba(108,43,217,0.08), rgba(108,43,217,0.02)); border-radius: 14px; padding: 1rem; border: 1px solid rgba(255,255,255,0.04); }}
+.small {{ opacity:0.9; font-size:0.95rem; }}
+.disclaimer {{ background: rgba(255,255,255,0.04); border-left: 4px solid {PRIMARY}; padding: .75rem 1rem; border-radius: 10px; }}
+</style>
 """, unsafe_allow_html=True)
 
-# ---- Header ----
-col1, col2 = st.columns([1,2])
+# Header
+col1, col2 = st.columns([2,1])
 with col1:
-    st.markdown("### 🫁 **Lung Insight – Demo (Educational)**")
-    st.markdown("#### نموذج تجريبي للتنبؤ بالمخاطر وتحليل الصور (غير تشخيصي)")
+    st.title("LungSight Pro")
+    st.markdown("**Comprehensive patient intake & simulated tumor analysis**")
 with col2:
-    st.markdown("""
-    <div class="disclaimer">
-    <b>تنبيه مهم:</b> هذا التطبيق لأغراض تعليمية وتجريبية فقط، ولا يقدم تشخيصًا طبيًا ولا يستبدل الطبيب. 
-    لا تعتمد على نتائجه لاتخاذ قرارات صحية. إذا كانت لديك أعراض مقلقة، راجع مختصًا.
-    </div>
-    """, unsafe_allow_html=True)
+    st.image("https://raw.githubusercontent.com/streamlit/demo/master/hello/st_lottie.gif", width=96)
 
-with st.sidebar:
-    st.markdown("## ⚙️ الإعدادات")
-    st.write("املأ العوامل المختلفة لتقدير مخاطر سرطان الرئة (تجريبي).")
+st.markdown("""
+<div class="disclaimer">
+<strong>Important:</strong> This application is a simulation for demonstration purposes. It does NOT replace clinical assessment. Clinical decisions must be made by qualified healthcare professionals.
+</div>
+""", unsafe_allow_html=True)
 
-    age = st.slider("العمر", 18, 90, 45)
-    sex = st.selectbox("النوع", ["ذكر", "أنثى"])
-    smoker = st.selectbox("هل تدخن حاليًا؟", ["لا", "نعم"])
-    years_smoked = st.slider("سنوات التدخين", 0, 60, 5)
-    packs_per_day = st.slider("عدد علب السجائر/اليوم", 0.0, 3.0, 0.5, 0.1)
-    family = st.selectbox("تاريخ عائلي لسرطان الرئة", ["لا", "نعم"])
-    copd = st.selectbox("COPD/انسداد رئوي مزمن", ["لا", "نعم"])
-    exposure = st.multiselect("تعرض مهني/بيئي", ["الأسبستوس", "الرادون", "عادم الديزل", "أخرى"])
-    symptoms = st.multiselect("أعراض", ["سعال مزمن", "بلغم مدمم", "ضيق تنفس", "فقدان وزن"])
+# Sidebar - patient inputs
+st.sidebar.header("Patient information")
+age = st.sidebar.number_input("Age", min_value=18, max_value=100, value=55)
+gender = st.sidebar.selectbox("Gender", ["Male", "Female", "Other"])
+smoker = st.sidebar.selectbox("Smoking status", ["Never", "Former", "Current"])
+packs_per_day = st.sidebar.slider("Packs per day (if smoker)", 0.0, 5.0, 0.5, 0.1)
+years_smoked = st.sidebar.slider("Years smoked (if applicable)", 0, 60, 10)
+family_history = st.sidebar.selectbox("Family history of lung cancer", ["No", "Yes"])
+copd = st.sidebar.selectbox("COPD or chronic lung disease", ["No", "Yes"])
+exposures = st.sidebar.multiselect("Environmental/Occupational exposures", ["Asbestos", "Radon", "Diesel exhaust", "Silica", "Other"])
+symptoms = st.sidebar.multiselect("Symptoms", ["Chronic cough", "Hemoptysis (blood in sputum)", "Dyspnea (shortness of breath)", "Unexplained weight loss", "Chest pain", "Fatigue"])
 
-    st.markdown("---")
-    st.markdown("### 🖼️ صورة الأشعة (اختياري)")
-    img_file = st.file_uploader("ارفع صورة أشعة صدر (PNG/JPG)—للشرح التجريبي فقط", type=["png","jpg","jpeg"])
-    demo_mode = st.checkbox("تفعيل وضع العرض/العينات", value=True, help="يُولّد مناطق اشتباه وهمية للشرح.")
+st.sidebar.markdown("---")
+st.sidebar.header("Image (optional)")
+img_file = st.sidebar.file_uploader("Upload chest X-ray (PNG/JPG)", type=["png","jpg","jpeg"])
+demo_mode = st.sidebar.checkbox("Demo overlay (simulate lesions)", value=True)
 
-    st.markdown("---")
-    analyze = st.button("🚀 احسب المخاطر وحلل الصورة")
+# Utility functions
+def logistic(x): return 1/(1+math.exp(-x))
 
-def logistic(x):
-    return 1/(1+math.exp(-x))
+def compute_risk(age, smoker, years_smoked, packs, family, copd, exposures, symptoms):
+    x = -6.0
+    x += 0.04 * age
+    x += 0.9 if smoker == "Current" else 0.4 if smoker == "Former" else 0.0
+    x += 0.03 * years_smoked
+    x += 0.6 * packs
+    x += 0.7 if family == "Yes" else 0.0
+    x += 0.6 if copd == "Yes" else 0.0
+    x += 0.25 * len(exposures)
+    x += 0.2 * len(symptoms)
+    return max(0.0, min(1.0, logistic(x)))
 
-def risk_model(age, sex, smoker, years_smoked, packs_per_day, family, copd, exposure, symptoms):
-    # لعبة أوزان بسيطة لتجربة الواجهة فقط
-    x = -5.0
-    x += 0.035 * age
-    x += 0.6 if sex == "ذكر" else 0.4
-    x += 0.9 if smoker == "نعم" else 0.0
-    x += 0.02 * years_smoked
-    x += 0.5 * packs_per_day
-    x += 0.6 if family == "نعم" else 0.0
-    x += 0.7 if copd == "نعم" else 0.0
-    x += 0.3 * len(exposure)
-    x += 0.25 * len(symptoms)
-    p = logistic(x)
-    return max(0.0, min(1.0, p))
+def seeded_rng(seed_text):
+    h = hashlib.sha256(seed_text.encode()).hexdigest()
+    seed = int(h[:16],16)
+    return random.Random(seed)
 
-def seeded_random(seed_text):
-    h = hashlib.sha256(seed_text.encode("utf-8")).hexdigest()
-    seed = int(h[:16], 16)
-    rng = random.Random(seed)
-    return rng
-
-def fake_lesion_overlay(image: Image.Image, rng: random.Random, n=2):
+def fake_lesions(image, rng, n=1):
     img = image.convert("RGBA").resize((512,512))
     overlay = Image.new("RGBA", img.size, (0,0,0,0))
     draw = ImageDraw.Draw(overlay)
-    W, H = img.size
+    W,H = img.size
     spots = []
     for i in range(n):
-        r = rng.randint(18, 60)
+        r = rng.randint(12,70)
         x = rng.randint(r, W-r)
         y = rng.randint(r, H-r)
-        # draw soft circle
-        grad = Image.new('L', (2*r, 2*r), 0)
-        for rr in range(r, 0, -1):
-            alpha = int(255 * (rr/r) ** 2)
-            ImageDraw.Draw(grad).ellipse((r-rr, r-rr, r+rr, r+rr), fill=alpha)
-        color = (108, 43, 217, 90)  # violet
-        patch = Image.new('RGBA', (2*r, 2*r), color)
+        # soft circle
+        grad = Image.new('L', (2*r,2*r), 0)
+        for rr in range(r,0,-1):
+            alpha = int(200*(rr/r)**2)
+            ImageDraw.Draw(grad).ellipse((r-rr,r-rr,r+rr,r+rr), fill=alpha)
+        patch = Image.new('RGBA',(2*r,2*r),(108,43,217,120))
         patch.putalpha(grad)
-        overlay.paste(patch, (x-r, y-r), patch)
+        overlay.paste(patch,(x-r,y-r), patch)
         spots.append((x/W, y/H, r/max(W,H)))
     out = Image.alpha_composite(img, overlay)
     return out, spots
 
-def spots_to_text(spots):
-    lines = []
-    for i,(nx, ny, nr) in enumerate(spots, start=1):
-        loc = []
-        loc.append("علوي" if ny < 0.33 else "سفلي" if ny > 0.66 else "وسطي")
-        loc.append("أيمن" if nx < 0.5 else "أيسر")
-        size_pct = int(nr*100)
-        lines.append(f"منطقة اشتباه #{i}: ({', '.join(loc)}), الحجم التقريبي ~ {size_pct}% من عرض الصورة.")
-    return "\n".join(lines) if lines else "لا توجد مناطق اشتباه معروضة."
+# Main action
+if st.button("Analyze Patient"):
+    # Risk score
+    risk = compute_risk(age, smoker, years_smoked, packs_per_day, family_history, copd, exposures, symptoms)
+    risk_pct = int(risk*100)
 
-if analyze:
-    # --- Risk ---
-    prob = risk_model(age, sex, smoker, years_smoked, packs_per_day, family, copd, exposure, symptoms)
-    percent = int(prob*100)
+    # Tumor simulation
+    seed_text = f"{age}{gender}{smoker}{years_smoked}{packs_per_day}{','.join(symptoms)}"
+    rng = seeded_rng(seed_text)
+    tumor_cm = round(rng.uniform(0.5, 6.0), 1)
+    tumor_pct = round(min(95, (tumor_cm/30)*100), 1)  # arbitrary relative percent
+    side = rng.choice(["Right", "Left"])
+    position = rng.choice(["Upper lobe", "Middle lobe", "Lower lobe"])
+    classification = rng.choices(["Benign", "Malignant"], weights=(40,60), k=1)[0]
 
-    st.markdown("## 📈 نتيجة تقدير المخاطر (تجريبي)")
-    c1, c2, c3 = st.columns(3)
+    # Display analysis
+    st.markdown("## Tumor Analysis")
+    c1,c2 = st.columns([2,3])
     with c1:
-        st.markdown(f"""<div class="metric-card"><h3>نسبة الخطورة المتوقعة</h3>
-        <h1 style="margin:0;font-size:3rem">{percent}%</h1>
-        <p class="small">احتمالية تقريبية مبنية على مدخلاتك (غير طبية)</p></div>""", unsafe_allow_html=True)
+        st.markdown(f"<div class='card'><h3>Tumor size</h3><h1 style='margin:0'>{tumor_cm} cm</h1><p class='small'>Measured maximal diameter</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card' style='margin-top:8px;'><h3>Relative volume</h3><h2 style='margin:0'>{tumor_pct}%</h2><p class='small'>Approximate % of lung cross-section</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card' style='margin-top:8px;'><h3>Location</h3><h2 style='margin:0'>{side} lung • {position}</h2></div>", unsafe_allow_html=True)
     with c2:
-        packs = years_smoked * packs_per_day
-        st.markdown(f"""<div class="metric-card"><h3>التعرّض التراكمي (تقريبي)</h3>
-        <h1 style="margin:0;font-size:2.3rem">{packs:.1f}</h1>
-        <p class="small">Pack-Years (حساب بدائي)</p></div>""", unsafe_allow_html=True)
-    with c3:
-        st.markdown(f"""<div class="metric-card"><h3>عوامل مترافقة</h3>
-        <h1 style="margin:0;font-size:2.3rem">{len(exposure)+len(symptoms)}</h1>
-        <p class="small">عدد العوامل/الأعراض المحددة</p></div>""", unsafe_allow_html=True)
+        st.markdown(f"<div class='card'><h3>Classification</h3><h1 style='margin:0'>{classification}</h1><p class='small'>Simulation-based output</p></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='card' style='margin-top:8px;'><h3>Clinical risk score</h3><h2 style='margin:0'>{risk_pct}%</h2><p class='small'>Composite risk based on inputs</p></div>", unsafe_allow_html=True)
 
-    # --- Image analysis (demo) ---
-    st.markdown("## 🔎 تحليل صورة الأشعة (عرض تجريبي)")
+    # Image overlay
+    st.markdown("## Image Inspection")
     if img_file is not None:
         image = Image.open(img_file)
-        seed_txt = (str(image.size)+image.mode+str(percent)) if demo_mode else "no-demo"
-        rng = seeded_random(seed_txt)
-        overlay, spots = fake_lesion_overlay(image, rng, n=2 if demo_mode else 0)
+        overlay, spots = fake_lesions(image, rng, n=1 if demo_mode else 0)
         buf = io.BytesIO()
         overlay.save(buf, format="PNG")
-        st.image(overlay, caption="عرض توضيحي لمناطق اشتباه (ليست حقيقية)", use_column_width=True)
-        st.markdown("#### تفاصيل المناطق (تجريبي):")
-        st.code(spots_to_text(spots))
-        if demo_mode and spots:
-            # "severity" as percent of combined spot sizes (toy)
-            severity = int(min(95, sum(int(s[2]*100) for s in spots) + rng.randint(3,12)))
-            st.markdown(f"**نسبة تقديرية لشدة الاشتباه في الصورة: ~ {severity}% (توضيحي فقط)**")
+        st.image(overlay, caption="Overlayed image (simulated tumor highlight)", use_column_width=True)
+        if spots:
+            x,y,r = spots[0]
+            loc = ("Upper" if y<0.33 else "Lower" if y>0.66 else "Middle")
+            side_text = "Left" if x<0.5 else "Right"
+            st.markdown(f"**Detected region:** {loc} • {side_text} • approx {int(r*100)}% of image width")
     else:
-        st.info("يمكنك رفع صورة أشعة صدر بصيغة PNG/JPG لرؤية تراكب ملون يوضح مناطق اشتباه *وهمية* للعرض.")
+        st.info("No image uploaded. Upload a chest X-ray to view simulated overlay.")
 
-    # --- Educational content ---
-    st.markdown("## 📚 معلومات مختصرة عن الرئة (للتوعية)")
-    st.markdown("""
-    - الرئتان مسؤولتان عن تبادل الغازات (الأكسجين وثاني أكسيد الكربون).
-    - من عوامل خطورة سرطان الرئة: التدخين، التعرّض للرادون/الأسبستوس، التاريخ العائلي، ومرض الانسداد الرئوي.
-    - الأعراض المقلقة قد تشمل: سعال لا يتحسن، نفث دم، ألم صدري، فقدان وزن غير مبرر.
-    - الوقاية الأفضل: الإقلاع عن التدخين، التهوية الجيدة، وفحوصات دورية للفئات عالية الخطورة.
-    """)
+    # Next steps and center referral
+    st.markdown("## Recommended Next Steps")
+    st.markdown("""- This simulation recommends referral to a specialized oncology center for further evaluation and management.
+- Suggested center: **Baheya Cancer Center** — contact for scheduling diagnostic workup and treatment planning (surgery/chemotherapy/radiation as indicated).
+""")
 
-    # --- Neutral guidance ---
-    st.markdown("### 🤝 ماذا تفعل تاليًا؟")
-    st.markdown("""
-    - احتفظ بهذه النتائج التعليمية للمتابعة الذاتية فقط.
-    - إذا كانت لديك أعراض أو قلق، اطلب تقييمًا سريريًا من مختص.
-    - نماذج الذكاء الاصطناعي الطبية يجب أن تُعتمد من الجهات التنظيمية قبل الاستعمال السريري.
-    """)
+    st.markdown("### Patient Summary")
+    st.write({
+        "Age": age, "Gender": gender, "Smoking": smoker, "Years smoked": years_smoked,
+        "Packs/day": packs_per_day, "Family history": family_history, "COPD": copd,
+        "Exposures": exposures, "Symptoms": symptoms
+    })
 
 else:
-    st.markdown("""
-    ### ✨ ابدأ التجربة
-    اضبط المدخلات في الشريط الجانبي ثم اضغط **"احسب المخاطر وحلل الصورة"**.
-    يمكن تفعيل **وضع العرض** لإظهار مناطق اشتباه *وهمية* على الصورة لتوضيح الفكرة.
-    """)
+    st.markdown("### Enter patient data in the sidebar and press **Analyze Patient** to generate the simulated tumor analysis.")
 
-# Footer
 st.markdown("---")
-st.markdown('<div class="small">© 2025 Lung Insight (Demo). Educational use only.</div>', unsafe_allow_html=True)
+st.markdown("<div class='small'>© 2025 LungSight Pro</div>", unsafe_allow_html=True)
